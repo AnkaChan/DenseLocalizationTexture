@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/TinyExr/PyEXR" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/TinyExr/PyEXR/pybind11" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/TinyExr/PyEXR/tinyexr" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/TinyExr/pybind11" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/TinyExr/tinyexr" vcs="Git" />
+  </component>
+</project>
