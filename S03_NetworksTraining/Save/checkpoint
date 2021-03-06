@@ -1,2 +1,0 @@
-model_checkpoint_path: "C:\\Code\\MyRepo\\03_capture\\DenseLocalizationTexture\\S03_NetworksTraining\\Save\\N02_UVExtractor_DeepLabStructure_SingleMarker_epoch_000044.ckpt"
-all_model_checkpoint_paths: "C:\\Code\\MyRepo\\03_capture\\DenseLocalizationTexture\\S03_NetworksTraining\\Save\\N02_UVExtractor_DeepLabStructure_SingleMarker_epoch_000044.ckpt"
