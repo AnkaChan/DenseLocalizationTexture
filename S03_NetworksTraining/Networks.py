@@ -21,6 +21,10 @@ class UVExtractor(object):
         self.ignore_label = ignore_label
         self.inputs_shape = inputShape if inputShape is not None else [None, 60, 60, 3]
         self.labels_shape = labelShape if inputShape is not None else [None, 60, 60, 2]
+
+        self.imgWidth = inputShape[2]
+        self.imgHeight = inputShape[1]
+
         self.training = training
         self.inputs = tf.placeholder(tf.float32, shape=self.inputs_shape, name='inputs')
         self.labels = tf.placeholder(tf.float32, shape=self.labels_shape, name='labels')
@@ -130,3 +134,17 @@ class UVExtractor(object):
 
         return train_loss_summary, valid_loss_summary
 
+    def predict(self, imgs, batchSize = 10):
+        numBatch = int(np.ceil(imgs.shape[0] / batchSize))
+        predictions = []
+        for iBatch in range(numBatch):
+            fdVal = {self.inputs: imgs[iBatch*batchSize:(iBatch+1)*batchSize, ...],
+                     self.is_training: True,
+                     self.target_width: self.imgWidth,
+                     self.target_height: self.imgHeight,
+                     }
+
+            output = self.sess.run(self.outputs_resized, feed_dict=fdVal)
+            predictions.append(output)
+
+        return np.concatenate(predictions, axis=0)
