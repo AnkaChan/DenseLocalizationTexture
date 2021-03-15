@@ -9,12 +9,17 @@ from feature_extractor import MobileNet, Resnet, Vgg16
 from modules import atrous_spatial_pyramid_pooling
 from datetime import datetime
 
+class Config:
+    def __init__(self):
+        self.lrDecayStep = 10000
+        self.lrDecayRate = 0.7
 
 class UVExtractor(object):
     def __init__(self, base_architecture, training=True, ignore_label=0, batch_norm_momentum=0.9997,
-                 pre_trained_model=None, log_dir='./', inputShape = None, labelShape=None):
+                 pre_trained_model=None, log_dir='./', inputShape = None, labelShape=None, cfg=Config()):
         tf.reset_default_graph()
 
+        self.cfg=cfg
         self.outputStride=4
 
         self.is_training = tf.placeholder(tf.bool, None, name='is_training')
@@ -43,19 +48,24 @@ class UVExtractor(object):
 
         self.learning_rate = tf.placeholder(tf.float32, None, name='learning_rate')
         self.loss = self.loss_initializer()
+
+        self.optStep = tf.Variable(0, trainable=False)
+        self.learning_rate_decayed = tf.train.exponential_decay(self.learning_rate, self.optStep, self.cfg.lrDecayStep, self.cfg.lrDecayRate)
+        
         self.optimizer = self.optimizer_initializer()
 
         # Initialize tensorflow session
         self.saver = tf.train.Saver()
         self.sess = tf.Session()
+
         self.sess.run(tf.global_variables_initializer())
 
-        if self.training:
-            self.train_step = 0
-            now = datetime.now()
-            self.log_dir = os.path.join(log_dir, now.strftime('%Y%m%d-%H%M%S'))
-            self.writer = tf.summary.FileWriter(self.log_dir, tf.get_default_graph())
-            self.train_summaries, self.valid_summaries = self.summary()
+        # if self.training:
+        #     self.train_step = 0
+        #     now = datetime.now()
+        #     self.log_dir = os.path.join(log_dir, now.strftime('%Y%m%d-%H%M%S'))
+        #     self.writer = tf.summary.FileWriter(self.log_dir, tf.get_default_graph())
+        #     self.train_summaries, self.valid_summaries = self.summary()
 
     def backbone_initializer(self, base_architecture):
 
@@ -101,7 +111,7 @@ class UVExtractor(object):
     def optimizer_initializer(self):
 
         with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
-            optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
+            optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss, global_step=self.optStep)
 
         return optimizer
 
