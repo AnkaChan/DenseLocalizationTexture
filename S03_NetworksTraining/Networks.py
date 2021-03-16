@@ -13,6 +13,7 @@ class Config:
     def __init__(self):
         self.lrDecayStep = 10000
         self.lrDecayRate = 0.7
+        self.momentum = 0.5
 
 class UVExtractor(object):
     def __init__(self, base_architecture, training=True, ignore_label=0, batch_norm_momentum=0.9997,
