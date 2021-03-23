@@ -150,7 +150,7 @@ class UVExtractor(object):
         predictions = []
         for iBatch in range(numBatch):
             fdVal = {self.inputs: imgs[iBatch*batchSize:(iBatch+1)*batchSize, ...],
-                     self.is_training: True,
+                     self.is_training: False,
                      self.target_width: self.imgWidth,
                      self.target_height: self.imgHeight,
                      }
