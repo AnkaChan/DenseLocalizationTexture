@@ -11,7 +11,7 @@ from datetime import datetime
 
 class Config:
     def __init__(self):
-        self.lrDecayStep = 10000
+        self.lrDecayStep = 1000
         self.lrDecayRate = 0.7
         self.momentum = 0.5
 
@@ -51,7 +51,11 @@ class UVExtractor(object):
         self.loss = self.loss_initializer()
 
         self.optStep = tf.Variable(0, trainable=False)
-        self.learning_rate_decayed = tf.train.exponential_decay(self.learning_rate, self.optStep, self.cfg.lrDecayStep, self.cfg.lrDecayRate)
+        self.lrDecayRate_ph = tf.placeholder(tf.float32, None, name='lrDecayRate_ph')
+        self.lrDecayStep_ph = tf.placeholder(tf.int32, None, name='lrDecayStep_ph')
+
+        self.learning_rate_decayed = tf.train.exponential_decay(self.learning_rate, self.optStep, self.lrDecayStep_ph,
+                                                                self.lrDecayRate_ph)
         
         self.optimizer = self.optimizer_initializer()
 
@@ -145,12 +149,12 @@ class UVExtractor(object):
 
         return train_loss_summary, valid_loss_summary
 
-    def predict(self, imgs, batchSize = 10):
+    def predict(self, imgs, batchSize = 20):
         numBatch = int(np.ceil(imgs.shape[0] / batchSize))
         predictions = []
         for iBatch in range(numBatch):
             fdVal = {self.inputs: imgs[iBatch*batchSize:(iBatch+1)*batchSize, ...],
-                     self.is_training: True,
+                     self.is_training: False,
                      self.target_width: self.imgWidth,
                      self.target_height: self.imgHeight,
                      }

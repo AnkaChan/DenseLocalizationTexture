@@ -1,6 +1,7 @@
 import numpy as np
 import cv2, json
 from os.path import join
+import random
 
 def predToRGB(outputs, normalize=False):
     rgb = np.stack([outputs[..., 0], outputs[..., 1], np.zeros(outputs[..., 1].shape)], -1)
@@ -19,15 +20,16 @@ def predAndGdToRGB(outputs, gd, normalize=False):
 
     if normalize:
         for iChannel in range(2):
-            minVal = np.min(rgb[:,:,iChannel])
-            maxVal = np.max(rgb[:,:,iChannel])
+            minVal = np.min([np.min(rgb[:,:,iChannel]), np.min(gd[:,:,iChannel])])
+
+            maxVal = np.max([np.max(rgb[:,:,iChannel]), np.max(gd[:,:,iChannel])])
             rgb[:,:,iChannel] = (rgb[:,:,iChannel]-minVal) / (maxVal - minVal)
 
             gd[:,:,iChannel] = (gd[:,:,iChannel]-minVal) / (maxVal - minVal)
 
     return rgb, gd
 
-def loadDataV1(dataFolder, numMarkers, numTrain):
+def loadDataV1(dataFolder, numMarkers, ):
     imgsPerMaker = []
     uvsPerMaker = []
 
@@ -43,9 +45,19 @@ def loadDataV1(dataFolder, numMarkers, numTrain):
 
     return imgsPerMaker, uvsPerMaker
 
-def divideTrainValSet(imgs, uvs, numTest):
+def shuffleTogether(a, b):
+    # c = list(zip(a, b))
+    # random.shuffle(c)
+    # a, b = zip(*c)
+    p = np.random.permutation(len(a))
+    return a[p], b[p]
+
+def divideTrainValSet(imgs, uvs, numTest, shuffle=False):
     numData = imgs.shape[0]
     sizeTrain = numData - numTest
+
+    if shuffle:
+        imgs, uvs = shuffleTogether(imgs, uvs)
 
     trainData = imgs[:-numTest, ...]
     trainUV = uvs[:-numTest, ...]
@@ -54,6 +66,35 @@ def divideTrainValSet(imgs, uvs, numTest):
     testUV = uvs[-numTest:, ...]
 
     return trainData, trainUV, testData, testUV, numData
+
+def divideTrainValSetAll(imgs, uvs, numTest, shuffle=False):
+    numDataAll = 0
+    trainDataAll = []
+    trainUVAll = []
+    testDataAll = []
+    testUVAll = []
+    assert len(imgs)==len(uvs)
+
+    for iMarker in range(len(imgs)):
+        trainData, trainUV, testData, testUV, numData = divideTrainValSet(imgs[iMarker], uvs[iMarker], numTest, )
+        numDataAll += numData
+        sizeTrain = numData - numTest
+
+        trainDataAll.append(trainData)
+        trainUVAll.append(trainUV)
+        testDataAll.append(testData)
+        testUVAll.append(testUV)
+
+    trainDataAll = np.concatenate(trainDataAll, axis=0)
+    trainUVAll = np.concatenate(trainUVAll, axis=0)
+    testDataAll = np.concatenate(testDataAll, axis=0)
+    testUVAll = np.concatenate(testUVAll, axis=0)
+
+    if shuffle:
+        trainDataAll, trainUVAll = shuffleTogether(trainDataAll, trainUVAll)
+        testDataAll, testUVAll = shuffleTogether(testDataAll, testUVAll)
+
+    return trainDataAll, trainUVAll, testDataAll, testUVAll, numDataAll
 
 def evaluate(imgs, groundTruth, uvExtractor, batchSize=10, perImgEval=True):
     predictions = uvExtractor.predict(imgs, batchSize=batchSize)

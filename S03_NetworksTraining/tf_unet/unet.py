@@ -317,10 +317,9 @@ class UnetLocalizer(object):
     :param cost_kwargs: (optional) kwargs passed to the cost function. See Unet._get_cost for more options
     """
 
-    def __init__(self, channels, n_class, cost_kwargs={}, cfg=Config(), **kwargs):
+    def __init__(self, channels, n_class, lossType='Smooth_L1', cost_kwargs={},   **kwargs):
         tf.reset_default_graph()
 
-        self.cfg = cfg
 
         self.n_class = n_class
         self.summaries = kwargs.get("summaries", True)
@@ -331,15 +330,18 @@ class UnetLocalizer(object):
 
         self.logits, self.variables, self.offset = create_conv_net(self.x, self.keep_prob, channels, n_class, **kwargs)
 
-        self.cost = self._get_cost(self.logits, cost_kwargs)
+        self.cost = self._get_cost(self.logits, lossType, cost_kwargs, )
 
         self.gradients_node = tf.gradients(self.cost, self.variables)
 
         self.learning_rate = tf.placeholder(tf.float32, None, name='learning_rate')
 
         self.optStep = tf.Variable(0, trainable=False)
-        self.learning_rate_decayed = tf.train.exponential_decay(self.learning_rate, self.optStep, self.cfg.lrDecayStep,
-                                                                self.cfg.lrDecayRate)
+        self.lrDecayRate_ph = tf.placeholder(tf.float32, None, name='lrDecayRate_ph')
+        self.lrDecayStep_ph = tf.placeholder(tf.int32, None, name='lrDecayStep_ph')
+
+        self.learning_rate_decayed = tf.train.exponential_decay(self.learning_rate, self.optStep, self.lrDecayStep_ph,
+                                                                self.lrDecayRate_ph)
 
         self.optimizer = self.optimizer_initializer()
 
@@ -352,10 +354,10 @@ class UnetLocalizer(object):
     def Smooth_l1_loss(self, labels, predictions):
         diff = tf.abs(labels - predictions)
         less_than_one = tf.cast(tf.less(diff, 1.0), tf.float32)  # Bool to float32
-        smooth_l1_loss = (less_than_one * 0.5 * diff ** 2) + (1.0 - less_than_one) * (diff - 0.5)  # 同上图公式
+        smooth_l1_loss = (less_than_one * 0.5 * diff ** 2) + (1.0 - less_than_one) * (diff - 0.5)  #
         return tf.reduce_mean(smooth_l1_loss)
 
-    def _get_cost(self, logits, cost_kwargs):
+    def _get_cost(self, logits, lossType, cost_kwargs):
         """
         Constructs the cost function, either cross_entropy, weighted cross_entropy or dice_coefficient.
         Optional arguments are:
@@ -393,7 +395,12 @@ class UnetLocalizer(object):
             #
             # else:
             #     raise ValueError("Unknown cost function: " % cost_name)
-            loss = self.Smooth_l1_loss(logits, self.y)
+
+            if lossType == 'Smooth_L1':
+                loss = self.Smooth_l1_loss(logits, self.y)
+
+            elif lossType == 'L1':
+                loss = tf.reduce_mean(tf.abs(logits - self.y))
 
             regularizer = cost_kwargs.pop("regularizer", None)
             if regularizer is not None:
@@ -430,7 +437,6 @@ class UnetLocalizer(object):
         #
         #     y_dummy = np.empty((x_test.shape[0], x_test.shape[1], x_test.shape[2], self.n_class))
         #     prediction = sess.run(self.logits, feed_dict={self.x: x_test, self.y: y_dummy, self.keep_prob: 1.})
-
         numBatch = int(np.ceil(imgs.shape[0] / batchSize))
         predictions = []
         for iBatch in range(numBatch):
