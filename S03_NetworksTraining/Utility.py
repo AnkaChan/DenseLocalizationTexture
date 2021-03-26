@@ -3,6 +3,7 @@ import cv2, json
 from os.path import join
 import random
 
+
 def predToRGB(outputs, normalize=False):
     rgb = np.stack([outputs[..., 0], outputs[..., 1], np.zeros(outputs[..., 1].shape)], -1)
 
